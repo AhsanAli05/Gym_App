@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { logout, getCurrentUser } from '../services/AuthService';
+import OpenSans from '../constants/Fonts';
 
 export default function Home() {
   const [user, setUser] = useState(null);
@@ -83,8 +84,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: {
+    fontFamily: OpenSans.Bold,
     fontSize: 32,
-    fontWeight: 'bold',
+    // fontWeight: 'bold',
     marginBottom: 30,
     textAlign: 'center',
     color: '#333',
