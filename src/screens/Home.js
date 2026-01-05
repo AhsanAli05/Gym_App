@@ -10,9 +10,12 @@ import {
 import { logout, getCurrentUser } from '../services/AuthService';
 import OpenSans from '../constants/Fonts';
 
+import DashboardHeader from '../components/DashboardHeader';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function Home() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -20,35 +23,43 @@ export default function Home() {
   }, []);
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          setLoading(true);
+          const result = await logout();
+          setLoading(false);
+
+          if (!result.success) {
+            Alert.alert('Error', result.error || 'Failed to logout');
+          }
+          // Navigation will be handled automatically by RootNavigator listening to auth state
         },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            setLoading(true);
-            const result = await logout();
-            setLoading(false);
-            
-            if (!result.success) {
-              Alert.alert('Error', result.error || 'Failed to logout');
-            }
-            // Navigation will be handled automatically by RootNavigator listening to auth state
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
       <View style={styles.content}>
+        {/* <DashboardHeader /> */}
+        <DashboardHeader username="Ahsan" imageUrl={user?.photoURL} />
         <Text style={styles.title}>Welcome!</Text>
         {user && (
           <View style={styles.userInfo}>
@@ -56,7 +67,7 @@ export default function Home() {
             <Text style={styles.email}>{user.email}</Text>
           </View>
         )}
-        
+
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleLogout}
@@ -80,8 +91,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    padding: 20,
+    justifyContent: 'start',
+    alignItems: 'start',
+    // padding: 20,
   },
   title: {
     fontFamily: OpenSans.Bold,

@@ -1,9 +1,10 @@
+import React, { useEffect, useState, useRef } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useEffect, useState, useRef } from 'react';
-
 import { listenToAuthChanges } from '../services/AuthService';
 import apiHandler from '../handler/apiHandler';
 import { API } from '../constants/api';
+import { setUserProfile } from '../store/slices/userSlice';
 
 import Splash from '../screens/Splash';
 import AuthNavigator from './AuthNavigator';
@@ -14,50 +15,56 @@ const Stack = createNativeStackNavigator();
 export default function RootNavigator() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
 
-  // 🔒 Prevent multiple sync calls
+  // Get pending data from Redux
+  const pendingData = useSelector(state => state.user.pendingRegisterData);
   const hasSyncedRef = useRef(false);
+
+  // Keep a Ref of pending data so the listener always has the latest values
+  const pendingRef = useRef(pendingData);
+  useEffect(() => {
+    pendingRef.current = pendingData;
+  }, [pendingData]);
 
   useEffect(() => {
     const unsubscribe = listenToAuthChanges(async firebaseUser => {
-      setUser(firebaseUser);
-      setLoading(false);
+      if (!firebaseUser) {
+        setUser(null);
+        hasSyncedRef.current = false;
+        setLoading(false);
+        return;
+      }
 
-      // ✅ Call sync ONLY when user exists & not already synced
-      if (firebaseUser && !hasSyncedRef.current) {
+      if (!hasSyncedRef.current) {
+        hasSyncedRef.current = true;
         try {
-          hasSyncedRef.current = true;
-
           const token = await firebaseUser.getIdToken();
-          console.log('the firebase token is', token);
+          const { name, role } = pendingRef.current || {};
 
-          // await apiHandler('POST', API.AUTH.SYNC, token, {
-          //   uid: firebaseUser.uid,
-          //   email: firebaseUser.email,
-          // });
-           // Call your backend sync API
           const response = await apiHandler('POST', API.AUTH.SYNC, token, {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
+            name,
+            role,
           });
+          Console.log('Sync response:', response);
+          if (response.success) {
+            dispatch(setUserProfile(response.user));
+          }
         } catch (error) {
-          console.warn('Auth sync failed:', error.message);
-          // ❗ Do NOT logout user if sync fails
+          console.warn('Sync failed:', error.message);
         }
       }
 
-      // 🔁 Reset sync flag on logout
-      if (!firebaseUser) {
-        hasSyncedRef.current = false;
-      }
+      setUser(firebaseUser);
+      setLoading(false);
     });
 
     return unsubscribe;
   }, []);
 
-  if (loading) {
-    return <Splash />;
-  }
+  if (loading) return <Splash />;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
