@@ -42,9 +42,11 @@ const apiHandler = async (
       data
     ) {
       config.data = data;
+      console.log('PAYLOAD INCOMING:', data);
     }
 
     const response = await axios(config);
+    log('API Response:', response.data);
 
     return response.data;
   } catch (error) {
